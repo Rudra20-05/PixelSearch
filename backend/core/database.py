@@ -74,6 +74,25 @@ class Database:
             row = cursor.fetchone()
             return dict(row) if row else None
 
+    def add_tags(self, image_id: int, tags: list):
+        """Add YOLO tags for a specific image ID to the database."""
+        if not tags: return
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            for tag_data in tags:
+                cursor.execute(
+                    'INSERT INTO object_tags (image_id, tag, confidence) VALUES (?, ?, ?)',
+                    (image_id, tag_data['tag'], tag_data['confidence'])
+                )
+            conn.commit()
+
+    def get_tags_for_image(self, image_id: int) -> list:
+        """Fetch all tags associated with an image ID."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT tag, confidence FROM object_tags WHERE image_id = ?', (image_id,))
+            return [{"tag": row[0], "confidence": row[1]} for row in cursor.fetchall()]
+
     def get_all_indexed_paths(self) -> set:
         """Returns a set of all file paths currently in the database to avoid re-indexing."""
         with self._get_connection() as conn:

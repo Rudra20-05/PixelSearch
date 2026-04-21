@@ -13,6 +13,7 @@ from config import IMAGE_DIR, FAISS_INDEX_PATH
 from backend.core.clip_encoder import CLIPEncoder, get_image_files
 from backend.core.faiss_index import FAISSIndex
 from backend.core.database import Database
+from backend.core.yolo_detector import YOLODetector
 
 def print_banner():
     print("""
@@ -34,6 +35,7 @@ def main():
     db = Database()
     faiss_db = FAISSIndex(dimension=512)
     encoder = CLIPEncoder()
+    yolo = YOLODetector()
 
     # Clear everything if requested
     if args.clear:
@@ -85,12 +87,23 @@ def main():
     print("\n[FAISS] Adding valid embeddings to vector index...")
     faiss_db.build_index(embeddings)
     
-    # Update SQLite mapping based on the FAISS insert order
-    print("[DB] Updating SQLite with metadata...")
+    # Update SQLite mapping based on the FAISS insert order and do Object Detection
+    print("[DB] Updating SQLite with metadata and running object detection...")
     for idx, path in enumerate(valid_paths):
         faiss_id = start_faiss_id + idx
         filename = os.path.basename(path)
-        db.add_image(faiss_id, filename, path)
+        
+        # Save to DB to get internal Image ID
+        image_db_id = db.add_image(faiss_id, filename, path)
+        
+        # Segment 4: Object detection
+        if image_db_id > 0:
+            sys.stdout.write(f"\r   [YOLO] Detecting objects in {filename}... ")
+            sys.stdout.flush()
+            tags = yolo.detect(path)
+            db.add_tags(image_db_id, tags)
+    
+    print("\n")
 
     # Save FAISS
     faiss_db.save_index(FAISS_INDEX_PATH)

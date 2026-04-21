@@ -1,6 +1,6 @@
 """
-PixelSearch -- CLI Search Script (Segment 3)
-Search images using natural language, FAISS, and SQLite.
+PixelSearch -- CLI Search Script (Segment 4)
+Search images using natural language (CLIP) + Object matching (YOLO).
 
 Usage:
     python backend/search.py
@@ -13,12 +13,12 @@ import time
 import argparse
 import numpy as np
 
-# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import TOP_K, FAISS_INDEX_PATH
 from backend.core.clip_encoder import CLIPEncoder
 from backend.core.faiss_index import FAISSIndex
 from backend.core.database import Database
+from backend.core.hybrid_search import HybridSearch
 
 def print_banner():
     print("""
@@ -30,40 +30,37 @@ def print_banner():
    |_|   |_/_/\\_\\___|_|____/ \\___|\\__,_|_|  \\___|_| |_|
 
    AI-Powered Semantic Photo Search
-   Segment 3: Database-Driven Search
+   Segment 4: Hybrid Search (CLIP + YOLOv8)
 ================================================================
     """)
 
-def print_results(distances: np.ndarray, indices: np.ndarray, db: Database, query: str):
-    print(f"\n{'=' * 60}")
+def print_results(results: list, query: str):
+    print(f"\n{'=' * 70}")
     print(f"  QUERY: \"{query}\"")
-    print(f"  Top {len(indices)} Results:")
-    print(f"{'=' * 60}")
+    print(f"  Top {len(results)} Results:")
+    print(f"{'=' * 70}")
 
-    for rank, (score, faiss_id) in enumerate(zip(distances, indices), 1):
-        if faiss_id < 0:
-            continue
+    for r in results:
+        path = r['filepath']
+        filename = r['filename']
+        clip_score = r['clip_score']
+        tag_score = r['tag_score']
+        final = r['final_score']
+        tags_str = ", ".join(r['tags'][:5]) + ("..." if len(r['tags']) > 5 else "")
         
-        # Look up image data by FAISS index
-        img_data = db.get_image_by_faiss_id(int(faiss_id))
-        if not img_data:
-            print(f"\n  #{rank}  [Missing in DB for ID {faiss_id}]")
-            continue
-            
-        path = img_data['filepath']
-        filename = img_data['filename']
-        bar_len = int(score * 30)
+        bar_len = int(final * 30)
         score_bar = "#" * bar_len + "." * (30 - bar_len)
         
-        print(f"\n  #{rank}  Score: {score:.4f}  [{score_bar}]")
-        print(f"      File: {filename}")
-        print(f"      Path: {path}")
+        print(f"\n  #{r['rank']}  Final: {final:.3f}  [{score_bar}]")
+        print(f"      Scores: CLIP={clip_score:.3f} | Tags={tag_score:.3f}")
+        print(f"      File:   {filename}")
+        print(f"      Tags:   {tags_str}")
 
-    print(f"\n{'=' * 60}")
+    print(f"\n{'=' * 70}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PixelSearch -- Semantic Image Search")
+    parser = argparse.ArgumentParser(description="PixelSearch -- Hybrid Search")
     parser.add_argument("--top-k", type=int, default=TOP_K,
                         help=f"Number of results to return (default: {TOP_K})")
     args = parser.parse_args()
@@ -73,8 +70,8 @@ def main():
     encoder = CLIPEncoder()
     faiss_db = FAISSIndex(dimension=512)
     db = Database()
+    hybrid = HybridSearch(db)
 
-    # Require existing index (Indexing happens via index.py now)
     if not os.path.exists(FAISS_INDEX_PATH):
         print("\n[ERROR] FAISS index not found. Please run 'python backend/index.py' first.")
         return
@@ -89,10 +86,10 @@ def main():
         print("[WARN] Index size mismatch with database! Run 'python backend/index.py --clear'")
 
     # Interactive search loop
-    print(f"\n{'=' * 60}")
+    print(f"\n{'=' * 70}")
     print(f"  READY! Type a description to search {faiss_db.current_count} images.")
     print(f"  Type 'quit' or 'exit' to stop.")
-    print(f"{'=' * 60}")
+    print(f"{'=' * 70}")
 
     while True:
         try:
@@ -108,11 +105,20 @@ def main():
             break
 
         search_start = time.time()
+        
+        # 1. Semantic Search (CLIP -> FAISS)
+        # Fetch more candidates to re-rank with YOLO
         query_emb = encoder.encode_text(query)
-        distances, indices = faiss_db.search(query_emb, top_k=args.top_k)
+        candidates_k = min(args.top_k * 3, faiss_db.current_count)
+        distances, indices = faiss_db.search(query_emb, top_k=candidates_k)
+        
+        # 2. Hybrid Re-ranking (YOLO)
+        results = hybrid.rank_results(query, distances, indices)
+        
         search_time = time.time() - search_start
 
-        print_results(distances, indices, db, query)
+        # Just take top_k after re-ranking
+        print_results(results[:args.top_k], query)
         print(f"  Search time: {search_time * 1000:.1f}ms")
 
 if __name__ == "__main__":
