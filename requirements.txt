@@ -1,0 +1,27 @@
+# PixelSearch Dependencies
+# Install: pip install -r requirements.txt
+
+# Core ML
+torch
+torchvision
+Pillow
+
+# CLIP (OpenAI)
+ftfy
+regex
+tqdm
+git+https://github.com/openai/CLIP.git
+
+# Vector Search (Segment 2)
+faiss-cpu
+
+# Object Detection (Segment 4)
+ultralytics
+
+# API Backend (Segment 5)
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Utilities
+numpy
