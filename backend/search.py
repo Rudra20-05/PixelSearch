@@ -1,29 +1,24 @@
 """
-PixelSearch -- CLI Search Script (Segment 2)
-Search images using natural language with CLIP and FAISS.
+PixelSearch -- CLI Search Script (Segment 3)
+Search images using natural language, FAISS, and SQLite.
 
 Usage:
     python backend/search.py
-    python backend/search.py --build
-    python backend/search.py --image-dir path/to/images
+    python backend/search.py --top-k 10
 """
 
 import os
 import sys
 import time
-import json
 import argparse
 import numpy as np
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import IMAGE_DIR, TOP_K, FAISS_INDEX_PATH
-from backend.core.clip_encoder import CLIPEncoder, get_image_files
+from config import TOP_K, FAISS_INDEX_PATH
+from backend.core.clip_encoder import CLIPEncoder
 from backend.core.faiss_index import FAISSIndex
-
-
-# Define path mapping file
-PATHS_FILE = FAISS_INDEX_PATH.replace('.bin', '_paths.json')
+from backend.core.database import Database
 
 def print_banner():
     print("""
@@ -35,23 +30,28 @@ def print_banner():
    |_|   |_/_/\\_\\___|_|____/ \\___|\\__,_|_|  \\___|_| |_|
 
    AI-Powered Semantic Photo Search
-   Segment 2: FAISS Accelerated Search
+   Segment 3: Database-Driven Search
 ================================================================
     """)
 
-
-def print_results(distances: np.ndarray, indices: np.ndarray, paths: list, query: str):
+def print_results(distances: np.ndarray, indices: np.ndarray, db: Database, query: str):
     print(f"\n{'=' * 60}")
     print(f"  QUERY: \"{query}\"")
     print(f"  Top {len(indices)} Results:")
     print(f"{'=' * 60}")
 
-    for rank, (score, idx) in enumerate(zip(distances, indices), 1):
-        if idx < 0 or idx >= len(paths):
-            continue # Invalid index fallback
+    for rank, (score, faiss_id) in enumerate(zip(distances, indices), 1):
+        if faiss_id < 0:
+            continue
         
-        path = paths[idx]
-        filename = os.path.basename(path)
+        # Look up image data by FAISS index
+        img_data = db.get_image_by_faiss_id(int(faiss_id))
+        if not img_data:
+            print(f"\n  #{rank}  [Missing in DB for ID {faiss_id}]")
+            continue
+            
+        path = img_data['filepath']
+        filename = img_data['filename']
         bar_len = int(score * 30)
         score_bar = "#" * bar_len + "." * (30 - bar_len)
         
@@ -64,58 +64,29 @@ def print_results(distances: np.ndarray, indices: np.ndarray, paths: list, query
 
 def main():
     parser = argparse.ArgumentParser(description="PixelSearch -- Semantic Image Search")
-    parser.add_argument("--image-dir", type=str, default=IMAGE_DIR,
-                        help=f"Directory containing images (default: {IMAGE_DIR})")
     parser.add_argument("--top-k", type=int, default=TOP_K,
                         help=f"Number of results to return (default: {TOP_K})")
-    parser.add_argument("--build", action="store_true",
-                        help="Force rebuild of the FAISS index")
     args = parser.parse_args()
 
     print_banner()
 
     encoder = CLIPEncoder()
-    faiss_db = FAISSIndex(dimension=512) # ViT-B/32 has 512-dim
-    valid_paths = []
+    faiss_db = FAISSIndex(dimension=512)
+    db = Database()
 
-    # Check if we should load existing index or build a new one
-    if not args.build and os.path.exists(FAISS_INDEX_PATH) and os.path.exists(PATHS_FILE):
-        print("\n[INFO] Loading existing FAISS index...")
-        load_start = time.time()
-        faiss_db.load_index(FAISS_INDEX_PATH)
-        with open(PATHS_FILE, 'r') as f:
-            valid_paths = json.load(f)
-        print(f"[TIME] Loading took: {time.time() - load_start:.2f}s")
-        if faiss_db.current_count != len(valid_paths):
-            print("[WARN] Index size mismatch with paths. Consider running with --build")
-    else:
-        # Build index from scratch
-        print(f"\n[SCAN] Looking for images in: {args.image_dir}")
-        image_paths = get_image_files(args.image_dir)
+    # Require existing index (Indexing happens via index.py now)
+    if not os.path.exists(FAISS_INDEX_PATH):
+        print("\n[ERROR] FAISS index not found. Please run 'python backend/index.py' first.")
+        return
 
-        if not image_paths:
-            print(f"\n[ERROR] No images found in '{args.image_dir}'")
-            return
-
-        print(f"   Found {len(image_paths)} images\n")
-
-        print("\n[INDEX] Generating image embeddings...")
-        start_time = time.time()
-        image_embeddings, valid_paths = encoder.encode_images(image_paths)
-        embed_time = time.time() - start_time
-
-        if len(valid_paths) == 0:
-            print("\n[ERROR] No images could be encoded. Check files for corruption.")
-            return
-
-        print(f"[TIME] Embedding time: {embed_time:.2f}s ({len(valid_paths)} images)")
-        
-        # Build and save FAISS index
-        print("\n[FAISS] Building vector index...")
-        faiss_db.build_index(image_embeddings)
-        faiss_db.save_index(FAISS_INDEX_PATH)
-        with open(PATHS_FILE, 'w') as f:
-            json.dump(valid_paths, f)
+    print("\n[INFO] Loading Database and FAISS Index...")
+    load_start = time.time()
+    faiss_db.load_index(FAISS_INDEX_PATH)
+    print(f"[TIME] Loading took: {time.time() - load_start:.2f}s")
+    
+    indexed_paths = db.get_all_indexed_paths()
+    if faiss_db.current_count != len(indexed_paths):
+        print("[WARN] Index size mismatch with database! Run 'python backend/index.py --clear'")
 
     # Interactive search loop
     print(f"\n{'=' * 60}")
@@ -141,9 +112,8 @@ def main():
         distances, indices = faiss_db.search(query_emb, top_k=args.top_k)
         search_time = time.time() - search_start
 
-        print_results(distances, indices, valid_paths, query)
+        print_results(distances, indices, db, query)
         print(f"  Search time: {search_time * 1000:.1f}ms")
-
 
 if __name__ == "__main__":
     main()
