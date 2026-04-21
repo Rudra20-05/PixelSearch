@@ -1,13 +1,13 @@
 """
 PixelSearch -- CLIP Encoder Module
-Handles image and text embedding generation using OpenAI CLIP (ViT-B/32).
+Handles image and text embedding generation using OpenCLIP.
 Automatically uses GPU if available, otherwise falls back to CPU.
 """
 
 import os
 import sys
 import torch
-import clip
+import open_clip
 import numpy as np
 from PIL import Image
 from typing import List, Tuple, Optional
@@ -33,7 +33,15 @@ class CLIPEncoder:
         self.model_name = model_name or CLIP_MODEL_NAME
 
         print(f"[CLIP] Loading model: {self.model_name}...")
-        self.model, self.preprocess = clip.load(self.model_name, device=self.device)
+        
+        # Determine pretrained tag depending on model name
+        pretrained = 'laion2b_s34b_b79k' if self.model_name == 'ViT-B-32' else 'openai'
+        if self.model_name == 'ViT-B/32':
+           self.model_name = 'ViT-B-32' # open_clip naming
+           pretrained = 'laion2b_s34b_b79k'
+
+        self.model, _, self.preprocess = open_clip.create_model_and_transforms(self.model_name, pretrained=pretrained, device=self.device)
+        self.tokenizer = open_clip.get_tokenizer(self.model_name)
         self.model.eval()
         print(f"[CLIP] Model loaded on {self.device}")
 
@@ -106,7 +114,7 @@ class CLIPEncoder:
 
     def encode_text(self, query: str) -> np.ndarray:
         """Generate normalized embedding for a text query. Returns 512-dim vector."""
-        text_tokens = clip.tokenize([query]).to(self.device)
+        text_tokens = self.tokenizer([query]).to(self.device)
 
         with torch.no_grad():
             text_embedding = self.model.encode_text(text_tokens)
