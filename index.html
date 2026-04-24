@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="PixelSearch — AI-powered semantic photo retrieval. Search your memories naturally with natural language, fully private and on-device." />
+  <meta name="theme-color" content="#0A0A14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <title>PixelSearch — The Gallery App That Remembers Your Life</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="apple-touch-icon" href="assets/logo.png" />
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet.js for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- CSS Design System -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/screens.css" />
+</head>
+<body>
+
+  <!-- Background Glows -->
+  <div class="bg-glow bg-glow--purple"></div>
+  <div class="bg-glow bg-glow--blue"></div>
+
+  <!-- App Shell -->
+  <div id="app">
+    <!-- App Content Area -->
+    <div class="app-content" id="app-content">
+      <!-- Screens rendered by JS -->
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div id="nav-container">
+      <!-- Navbar rendered by JS -->
+    </div>
+  </div>
+
+  <!-- JavaScript: Data Layer -->
+  <script src="js/data.js"></script>
+  
+  <!-- JavaScript: Components -->
+  <script src="js/components/searchbar.js"></script>
+  <script src="js/components/photocard.js"></script>
+  <script src="js/components/modal.js"></script>
+  <script src="js/components/navbar.js"></script>
+
+  <!-- JavaScript: Screens -->
+  <script src="js/screens/home.js"></script>
+  <script src="js/screens/search.js"></script>
+  <script src="js/screens/timeline.js"></script>
+  <script src="js/screens/assistant.js"></script>
+  <script src="js/screens/graph.js"></script>
+  <script src="js/screens/maps.js"></script>
+  <script src="js/screens/reels.js"></script>
+  <script src="js/screens/settings.js"></script>
+
+  <!-- JavaScript: App Controller -->
+  <script src="js/app.js"></script>
+
+  <!-- JavaScript: AI Engine (CLIP model — ES Module) -->
+  <script type="module" src="js/ai-engine.js"></script>
+
+</body>
+</html>
