@@ -75,7 +75,7 @@ with torch.no_grad():
             "image":     {0: "batch_size"},
             "embedding": {0: "batch_size"},
         },
-        opset_version=17,
+        opset_version=14,           # opset 14 = max compatibility with ONNX Runtime Android
         do_constant_folding=True,
         export_params=True,
     )

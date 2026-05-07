@@ -52,3 +52,17 @@ async def get_stats(request: Request):
         "total_images": request.app.state.faiss_db.current_count,
         "clip_model": request.app.state.encoder.model_name
     }
+
+class TextEncodeRequest(BaseModel):
+    text: str
+
+@router.post("/encode-text")
+async def encode_text(req: TextEncodeRequest, request: Request):
+    """
+    Encode a text query into a 512-dim CLIP embedding.
+    Used by the mobile app: text is sent here, embedding returned,
+    then the phone does cosine search against local embeddings.
+    Only the text query travels over the network — images stay on-device.
+    """
+    embedding = request.app.state.encoder.encode_text(req.text)
+    return {"embedding": embedding.tolist(), "dim": len(embedding)}

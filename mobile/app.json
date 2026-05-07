@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "PixelSearch",
+    "slug": "pixelsearch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0a0f",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pixelsearch.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "PixelSearch uses your photo library to index and search your photos. All processing happens on-device — your photos never leave your phone."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0f"
+      },
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "package": "com.pixelsearch.app"
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow PixelSearch to access your photos.",
+          "savePhotosPermission": "Allow PixelSearch to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
+    "assetBundlePatterns": [
+      "assets/**",
+      "assets/*.onnx"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "pixelsearch"
+      }
+    }
+  }
+}
