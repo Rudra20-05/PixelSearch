@@ -6,6 +6,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').r
 const EDIT_MODES = [
   { id: 'edit',    label: 'Edit with AI',       icon: '✏️', description: 'Describe changes in plain English', output: 'image',  provider: 'Stability AI' },
   { id: 'enhance', label: 'Enhance & Upscale',  icon: '✨', description: 'AI clarity enhancement & upscaling',  output: 'image',  provider: 'Stability AI' },
+  { id: 'makeup',  label: 'Makeup & Beauty',    icon: '💄', description: 'Apply professional makeup & beauty looks', output: 'image', provider: 'Stability AI' },
   { id: 'style',   label: 'Apply Art Style',     icon: '🎨', description: 'Transform into painting, sketch, etc.', output: 'image', provider: 'Replicate' },
   { id: 'video',   label: 'Animate to Video',    icon: '🎬', description: 'Generate a short AI video from this photo', output: 'video', provider: 'Replicate' },
 ];
@@ -13,6 +14,7 @@ const EDIT_MODES = [
 const PROMPT_SUGGESTIONS = {
   edit:    ['add professional makeup', 'make it look like sunset', 'remove background', 'add snow effect'],
   enhance: ['ultra sharp, 4K quality', 'restore old photo', 'remove noise and grain'],
+  makeup:  ['natural everyday makeup', 'bold red lips and smoky eyes', 'Korean glass skin look', 'bridal glam makeup', 'no-makeup makeup look'],
   style:   ['oil painting style', 'anime illustration', 'watercolor sketch', 'charcoal drawing', 'cyberpunk neon'],
   video:   ['gentle camera pan', 'zoom into subject', 'cinematic slow motion'],
 };

@@ -230,6 +230,42 @@ async def _style_transfer_replicate(filename: str, prompt: str) -> dict:
     raise HTTPException(status_code=504, detail="Style transfer timed out.")
 
 
+async def _apply_makeup(filename: str, prompt: str) -> dict:
+    """
+    Makeup & beauty enhancement using Stability AI style control.
+    Requires env var: STABILITY_API_KEY
+    """
+    api_key = _get_api_key("STABILITY_API_KEY")
+    img_b64 = _load_image_b64(filename)
+    img_bytes = base64.b64decode(img_b64)
+
+    # Enrich the prompt with professional beauty photography language
+    makeup_prompt = (
+        f"professional beauty photography, {prompt}, "
+        "flawless skin, soft studio lighting, high resolution portrait, sharp focus"
+    )
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        response = await client.post(
+            "https://api.stability.ai/v2beta/stable-image/control/style",
+            headers={"authorization": f"Bearer {api_key}", "accept": "image/*"},
+            files={"image": (filename, img_bytes, "image/jpeg")},
+            data={"prompt": makeup_prompt, "output_format": "jpeg", "fidelity": 0.8},
+        )
+
+    if response.status_code == 200:
+        result_b64 = base64.b64encode(response.content).decode("utf-8")
+        return {
+            "result_b64": result_b64,
+            "result_url": None,
+            "provider": "Stability AI",
+            "message": "Makeup applied successfully."
+        }
+    else:
+        raise HTTPException(status_code=response.status_code,
+                            detail=f"Stability AI error: {response.text}")
+
+
 # ─── Main Edit Endpoint ────────────────────────────────────────────────────────
 
 @router.post("/edit", response_model=EditResponse)
@@ -249,15 +285,17 @@ async def edit_image(edit_data: EditRequest, request: Request):
     try:
         if mode == "edit":
             result = await _edit_image_stability(edit_data.filename, edit_data.prompt)
-        elif mode == "video":
-            result = await _generate_video_replicate(edit_data.filename, edit_data.prompt)
         elif mode == "enhance":
             result = await _enhance_image_clarity(edit_data.filename, edit_data.prompt)
         elif mode == "style":
             result = await _style_transfer_replicate(edit_data.filename, edit_data.prompt)
+        elif mode == "video":
+            result = await _generate_video_replicate(edit_data.filename, edit_data.prompt)
+        elif mode == "makeup":
+            result = await _apply_makeup(edit_data.filename, edit_data.prompt)
         else:
             raise HTTPException(status_code=400,
-                                detail=f"Unknown mode '{mode}'. Valid: edit, video, enhance, style")
+                                detail=f"Unknown mode '{mode}'. Valid: edit, enhance, style, video, makeup")
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -300,6 +338,14 @@ async def list_edit_modes():
                 "provider": "Replicate (Stable Video Diffusion)",
                 "output": "video",
                 "icon": "🎬"
+            },
+            {
+                "id": "makeup",
+                "label": "Makeup & Beauty",
+                "description": "Apply professional makeup looks, enhance facial features, beauty retouching",
+                "provider": "Stability AI",
+                "output": "image",
+                "icon": "💄"
             }
         ],
         "privacy_notice": "All AI editing features require sending your photo to third-party services (Stability AI / Replicate). Your photo will be transmitted over the internet. PixelSearch does not store or log any edited results."
