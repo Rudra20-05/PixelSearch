@@ -17,6 +17,7 @@ from backend.core.faiss_index import FAISSIndex
 from backend.core.database import Database
 from backend.core.hybrid_search import HybridSearch
 from backend.routers.search_router import router as search_router
+from backend.routers.edit_router import router as edit_router
 
 # Use lifespan context manager to load heavy objects during startup
 @asynccontextmanager
@@ -63,11 +64,13 @@ app.add_middleware(
 
 # Route mounting
 app.include_router(search_router, prefix="/api")
+app.include_router(edit_router, prefix="/api")
 
 # Mount Static Files (serve raw images for the UI)
-# Using `follow_symlink=True` and making sure directory exists
 os.makedirs(IMAGE_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
+# Also mount at /api/images so the frontend URL pattern works correctly
+app.mount("/api/images", StaticFiles(directory=IMAGE_DIR), name="api_images")
 
 @app.get("/")
 def read_root():
