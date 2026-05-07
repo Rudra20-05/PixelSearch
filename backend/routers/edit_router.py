@@ -65,10 +65,10 @@ async def _edit_image_stability(filename: str, prompt: str) -> dict:
 
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
-            "https://api.stability.ai/v2beta/stable-image/edit/inpaint",
+            "https://api.stability.ai/v2beta/stable-image/control/style",
             headers={"authorization": f"Bearer {api_key}", "accept": "image/*"},
             files={"image": (filename, img_bytes, "image/jpeg")},
-            data={"prompt": prompt, "output_format": "jpeg"},
+            data={"prompt": prompt, "output_format": "jpeg", "fidelity": 0.5},
         )
 
     if response.status_code == 200:
