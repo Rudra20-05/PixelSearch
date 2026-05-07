@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './EditModal.css';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '') + '/api';
 
 const EDIT_MODES = [
   { id: 'edit',    label: 'Edit with AI',       icon: '✏️', description: 'Describe changes in plain English', output: 'image',  provider: 'Stability AI' },

@@ -3,7 +3,9 @@ import SearchBar from './components/SearchBar';
 import ImageGrid from './components/ImageGrid';
 import Loader, { EmptyState } from './components/Loader';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+// Use VITE_API_URL env var in production (set in Vercel dashboard)
+// Falls back to localhost for local development
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '') + '/api';
 
 function App() {
   const [query, setQuery] = useState('');
